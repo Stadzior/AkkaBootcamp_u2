@@ -7,7 +7,7 @@ using ChartApp.Messages;
 
 namespace ChartApp.Actors
 {
-    public class ChartingActor : UntypedActor
+    public class ChartingActor : ReceiveActor
     {
         private readonly Chart _chart;
         private Dictionary<string, Series> _seriesIndex;
@@ -20,14 +20,10 @@ namespace ChartApp.Actors
         {
             _chart = chart;
             _seriesIndex = seriesIndex;
+            Receive<InitializeChart>(HandleInitialize);
+            Receive<AddSeries>(HandleAddSeries);
         }
-
-        protected override void OnReceive(object message)
-        {
-            if (message is InitializeChart initializeChartMessage)
-                HandleInitialize(initializeChartMessage);
-        }
-
+        
         #region Individual Message Type Handlers
 
         private void HandleInitialize(InitializeChart message)
@@ -49,6 +45,13 @@ namespace ChartApp.Actors
                 series.Name = seriesName;
                 _chart.Series.Add(series);
             }
+        }
+        
+        private void HandleAddSeries(AddSeries series)
+        {
+            if (string.IsNullOrEmpty(series.Series.Name) || _seriesIndex.ContainsKey(series.Series.Name)) return;
+            _seriesIndex.Add(series.Series.Name, series.Series);
+            _chart.Series.Add(series.Series);
         }
         #endregion
     }
