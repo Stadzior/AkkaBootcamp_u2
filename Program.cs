@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Windows.Forms;
 using Akka.Actor;
-using Akka.Configuration;
 
 namespace ChartApp
 {
-    static class Program
+    internal static class Program
     {
         /// <summary>
         /// ActorSystem we'll be using to publish data to charts
@@ -17,7 +16,7 @@ namespace ChartApp
         /// The main entry point for the application.
         /// </summary>
         [STAThread]
-        static void Main()
+        private static void Main()
         {
             ChartActors = ActorSystem.Create("ChartActors");
             Application.SetHighDpiMode(HighDpiMode.SystemAware);
