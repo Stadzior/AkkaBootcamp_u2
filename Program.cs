@@ -1,16 +1,14 @@
 ﻿using System;
 using System.Windows.Forms;
-using Akka.Actor;
+using Autofac;
+using ChartApp.Factories;
+using ChartApp.Factories.Interfaces;
 
 namespace ChartApp
 {
     internal static class Program
     {
-        /// <summary>
-        /// ActorSystem we'll be using to publish data to charts
-        /// and subscribe from performance counters
-        /// </summary>
-        public static ActorSystem ChartActors;
+        public static IContainer Container { get; set; }
 
         /// <summary>
         /// The main entry point for the application.
@@ -18,7 +16,11 @@ namespace ChartApp
         [STAThread]
         private static void Main()
         {
-            ChartActors = ActorSystem.Create("ChartActors");
+            var builder = new ContainerBuilder();
+            builder.RegisterType<PerformanceCounterFactory>().As<IPerformanceCounterFactory>();
+            builder.RegisterType<SeriesFactory>().As<ISeriesFactory>();
+            Container = builder.Build();
+
             Application.SetHighDpiMode(HighDpiMode.SystemAware);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
