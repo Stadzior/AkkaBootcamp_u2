@@ -9,7 +9,7 @@ using ChartApp.Models;
 
 namespace ChartApp.Actors
 {
-    public class ChartingActor : ReceiveActor
+    public class ChartingActor : ReceiveActor, IWithUnboundedStash
     {
         /// <summary>
         /// Maximum number of points we will allow in a series
@@ -19,12 +19,14 @@ namespace ChartApp.Actors
         /// <summary>
         /// Incrementing counter we use to plot along the X-axis
         /// </summary>
-        private int xPosCounter = 0;
+        private int _xPosCounter;
 
         private readonly Chart _chart;
         private Dictionary<string, Series> _seriesIndex;
 
         private readonly Button _pauseButton;
+
+        public IStash Stash { get; set; }
 
         public ChartingActor(Chart chart, Button pauseButton) : this(chart, new Dictionary<string, Series>(), pauseButton)
         {
@@ -55,6 +57,8 @@ namespace ChartApp.Actors
 
         private void Paused()
         {
+            Receive<AddSeries>(addSeries => Stash.Stash());
+            Receive<RemoveSeries>(removeSeries => Stash.Stash());
             Receive<Metric>(metric =>
             {
                 metric.CounterValue = 0;
@@ -64,6 +68,7 @@ namespace ChartApp.Actors
             {
                 SetPauseButtonText(false);
                 UnbecomeStacked();
+                Stash.UnstashAll();
             });
         }
 
@@ -129,7 +134,7 @@ namespace ChartApp.Actors
                 return;
 
             var series = _seriesIndex[metric.Series];
-            series.Points.AddXY(xPosCounter++, metric.CounterValue);
+            series.Points.AddXY(_xPosCounter++, metric.CounterValue);
             while (series.Points.Count > MaxPoints) 
                 series.Points.RemoveAt(0);
             SetChartBoundaries();
@@ -145,8 +150,8 @@ namespace ChartApp.Actors
         {
             var allPoints = _seriesIndex.Values.SelectMany(series => series.Points).ToList();
             var yValues = allPoints.SelectMany(point => point.YValues).ToList();
-            double maxAxisX = xPosCounter;
-            double minAxisX = xPosCounter - MaxPoints;
+            double maxAxisX = _xPosCounter;
+            double minAxisX = _xPosCounter - MaxPoints;
             var maxAxisY = yValues.Count > 0 ? Math.Ceiling(yValues.Max()) : 1.0d;
             var minAxisY = yValues.Count > 0 ? Math.Floor(yValues.Min()) : 0.0d;
 
