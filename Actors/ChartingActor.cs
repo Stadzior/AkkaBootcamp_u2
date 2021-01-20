@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 using Akka.Actor;
 using ChartApp.Messages;
@@ -23,18 +24,47 @@ namespace ChartApp.Actors
         private readonly Chart _chart;
         private Dictionary<string, Series> _seriesIndex;
 
-        public ChartingActor(Chart chart) : this(chart, new Dictionary<string, Series>())
+        private readonly Button _pauseButton;
+
+        public ChartingActor(Chart chart, Button pauseButton) : this(chart, new Dictionary<string, Series>(), pauseButton)
         {
         }
 
-        public ChartingActor(Chart chart, Dictionary<string, Series> seriesIndex)
+        public ChartingActor(Chart chart, Dictionary<string, Series> seriesIndex, Button pauseButton)
         {
             _chart = chart;
             _seriesIndex = seriesIndex;
+            _pauseButton = pauseButton;
+            Charting();
+        }
+
+        private void Charting()
+        {
             Receive<InitializeChart>(HandleInitialize);
-            Receive<AddSeries>(HandleAddSeries); 
+            Receive<AddSeries>(HandleAddSeries);
             Receive<RemoveSeries>(HandleRemoveSeries);
             Receive<Metric>(HandleMetrics);
+
+            //new receive handler for the TogglePause message type
+            Receive<TogglePause>(pause =>
+            {
+                SetPauseButtonText(true);
+                BecomeStacked(Paused);
+            });
+        }
+
+        private void Paused()
+        {
+            Receive<Metric>(metric =>
+            {
+                metric.CounterValue = 0;
+                HandleMetrics(metric);
+            });
+            Receive<TogglePause>(pause =>
+            {
+                SetPauseButtonText(false);
+                UnbecomeStacked();
+            });
         }
 
         #region Individual Message Type Handlers
@@ -81,6 +111,7 @@ namespace ChartApp.Actors
             _chart.Series.Add(series.Series);
             SetChartBoundaries();
         }
+
         private void HandleRemoveSeries(RemoveSeries series)
         {
             if (string.IsNullOrEmpty(series.SeriesName) || !_seriesIndex.ContainsKey(series.SeriesName)) 
@@ -91,6 +122,7 @@ namespace ChartApp.Actors
             _chart.Series.Remove(seriesToRemove);
             SetChartBoundaries();
         }
+
         private void HandleMetrics(Metric metric)
         {
             if (string.IsNullOrEmpty(metric.Series) || !_seriesIndex.ContainsKey(metric.Series)) 
@@ -102,8 +134,12 @@ namespace ChartApp.Actors
                 series.Points.RemoveAt(0);
             SetChartBoundaries();
         }
-
         #endregion
+
+        #region "UI related stuff"
+
+        private void SetPauseButtonText(bool paused)
+            => _pauseButton.Text = $@"{(!paused ? "PAUSE ⏸" : "RESUME ►")}";
 
         private void SetChartBoundaries()
         {
@@ -123,5 +159,7 @@ namespace ChartApp.Actors
             area.AxisY.Minimum = minAxisY;
             area.AxisY.Maximum = maxAxisY;
         }
+
+        #endregion
     }
 }

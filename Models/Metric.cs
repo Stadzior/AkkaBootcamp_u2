@@ -17,6 +17,6 @@ namespace ChartApp.Models
 
         public string Series { get; }
 
-        public float CounterValue { get; }
+        public float CounterValue { get; set; }
     }
 }

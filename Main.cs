@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Windows.Forms;
-using System.Windows.Forms.DataVisualization.Charting;
 using Akka.Actor;
-using Akka.Util.Internal;
 using Autofac;
 using ChartApp.Actors;
 using ChartApp.Factories.Interfaces;
@@ -38,13 +35,16 @@ namespace ChartApp
 
         private void BtnDisk_Click(object sender, EventArgs e)
             => _toggleActors[CounterType.Disk].Tell(new Toggle());
+        private void BtnPauseResume_Click(object sender, EventArgs e)
+            => _chartingActor.Tell(new TogglePause());
+
 
         #region Initialization
 
         private void Main_Load(object sender, EventArgs e)
         {
             ChartActors = ActorSystem.Create("ChartActors");
-            _chartingActor = ChartActors.ActorOf(Props.Create(() => new ChartingActor(sysChart)), "charting");
+            _chartingActor = ChartActors.ActorOf(Props.Create(() => new ChartingActor(sysChart, btnPauseResume)), "charting");
             _chartingActor.Tell(new InitializeChart());
             
             IPerformanceCounterFactory performanceCounterFactory;
